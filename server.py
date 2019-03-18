@@ -1,4 +1,6 @@
 import socket
+import select
+import utils
 
 CLIENT_PORT = 12345
 SERVER_PORT = 50000
@@ -13,9 +15,58 @@ broadcastSocket.close()
 
 # Create a socket for accepting incoming TCP connections from clients
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 serverSocket.bind(('', SERVER_PORT))
 serverSocket.listen()
 
-while True:
-  sock, address = serverSocket.accept()
-  print("Connected to a client ", sock.getpeername())
+# Define data structures for async IO
+clientSockets = { serverSocket.fileno(): serverSocket }
+addresses = { }
+bytesReceived = { }
+
+# Create poll object and register the listening socket
+pollObject = select.poll()
+pollObject.register(serverSocket, select.POLLIN) 
+
+for fd, event in utils.pollEvents(pollObject):
+  sock = clientSockets[fd]
+
+  if event & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+
+    # Client socket is closed
+    address = addresses.pop(sock)
+    pendingData = bytesReceived.pop(sock, b'').decode("ascii")
+
+    if pendingData:
+      print(f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}")
+    else:
+      print(f"Disconnection: Client {address}")
+    
+    pollObject.unregister(fd)
+    del clientSockets[fd]
+  
+  elif sock is serverSocket:
+
+    # New Connection
+    sock, address = sock.accept()
+    print(f"New Connection from {address}")
+    sock.setblocking(False)
+    clientSockets[sock.fileno()] = sock
+    addresses[sock] = address
+    pollObject.register(sock, select.POLLIN)
+  
+  elif event & select.POLLIN:
+
+    # Incoming data
+    nextData = sock.recv(4096)
+
+    if not nextData:
+      sock.close()
+      continue
+    
+    totalData = bytesReceived.pop(sock, b'') + nextData
+
+    if(totalData.endswith(b'~')):
+      print(f"Received {totalData.decode('ascii')} from {addresses[sock]}")
+    else:
+      bytesReceived[sock] = totalData

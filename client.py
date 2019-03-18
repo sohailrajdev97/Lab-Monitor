@@ -18,3 +18,8 @@ broadcastSocket.close()
 
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serverSocket.connect((serverAddress[0], int(message.split("@")[1])))
+
+serverSocket.sendall(b"hello server !!!!~")
+
+while True:
+  pass
