@@ -1,4 +1,6 @@
 import socket
+import events
+from threading import Thread
 
 PORT = 12345
 
@@ -19,7 +21,9 @@ broadcastSocket.close()
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serverSocket.connect((serverAddress[0], int(message.split("@")[1])))
 
-serverSocket.sendall(b"hello server !!!!~")
+# serverSocket.sendall(b"hello server !!!!~")
+Thread(target=events.networkEvents, args=[serverSocket]).start()
+Thread(target=events.USBEvents, args=[serverSocket]).start()
 
 while True:
   pass

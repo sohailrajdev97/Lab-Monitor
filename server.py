@@ -1,6 +1,6 @@
 import socket
 import select
-import utils
+import events
 
 CLIENT_PORT = 12345
 SERVER_PORT = 50000
@@ -28,7 +28,7 @@ bytesReceived = { }
 pollObject = select.poll()
 pollObject.register(serverSocket, select.POLLIN) 
 
-for fd, event in utils.pollEvents(pollObject):
+for fd, event in events.pollEvents(pollObject):
   sock = clientSockets[fd]
 
   if event & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
