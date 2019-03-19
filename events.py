@@ -9,6 +9,7 @@ def pollEvents(pollObject):
 def USBEvents(serverSocket):
 
   oldDevices = psutil.disk_partitions()
+  serverSocket.sendall(b"Listening to partition mount events~")
 
   while True:    
 

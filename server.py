@@ -1,10 +1,12 @@
 import socket
 import select
+import ssl
 import events
 
 CLIENT_PORT = 12345
 SERVER_PORT = 50000
-
+CAFILE = "./keys/CA/ca.crt"
+PEMFILE = "./keys/server.pem"
 INIT_MESSAGE = f"server-init@{SERVER_PORT}"
 
 # Send a broadcast to all clients (on the same subnet)
@@ -48,7 +50,16 @@ for fd, event in events.pollEvents(pollObject):
   elif sock is serverSocket:
 
     # New Connection
+
+    # Setup TLS
+    purpose = ssl.Purpose.CLIENT_AUTH
+    context = ssl.create_default_context(purpose=purpose, cafile=CAFILE)
+    context.load_cert_chain(PEMFILE)
+
+    # Accept incoming connection
     sock, address = sock.accept()
+    sock = context.wrap_socket(sock, server_side=True)
+
     print(f"New Connection from {address}")
     sock.setblocking(False)
     clientSockets[sock.fileno()] = sock
@@ -67,6 +78,6 @@ for fd, event in events.pollEvents(pollObject):
     totalData = bytesReceived.pop(sock, b'') + nextData
 
     if(totalData.endswith(b'~')):
-      print(f"Received {totalData.decode('ascii')} from {addresses[sock]}")
+      print(f"{totalData.decode('ascii')[:-1]} from {addresses[sock]}")
     else:
       bytesReceived[sock] = totalData

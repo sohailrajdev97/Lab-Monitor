@@ -1,8 +1,10 @@
 import socket
+import ssl
 import events
 from threading import Thread
 
 PORT = 12345
+CAFILE = "./keys/CA/ca.crt"
 
 broadcastSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 broadcastSocket.bind(('', PORT))
@@ -18,12 +20,12 @@ while True:
 
 broadcastSocket.close()
 
-serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-serverSocket.connect((serverAddress[0], int(message.split("@")[1])))
+purpose = ssl.Purpose.SERVER_AUTH
+context = ssl.create_default_context(purpose=purpose, cafile=CAFILE)
 
-# serverSocket.sendall(b"hello server !!!!~")
-Thread(target=events.networkEvents, args=[serverSocket]).start()
-Thread(target=events.USBEvents, args=[serverSocket]).start()
+rawServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+rawServerSocket.connect((serverAddress[0], int(message.split("@")[1])))
+sslServerSocket = context.wrap_socket(rawServerSocket, server_hostname="Lab-Monitor")
 
-while True:
-  pass
+Thread(target=events.networkEvents, args=[sslServerSocket]).start()
+Thread(target=events.USBEvents, args=[sslServerSocket]).start()
