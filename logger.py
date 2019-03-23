@@ -22,6 +22,6 @@ def log(message, serverSocket):
     file.write(formatMessage("Not connected to a server. Logs will be written to the disk."))
 
   else:
-    serverSocket.getSocket().sendall((formatMessage(message) + "~").encode("ascii"))
+    serverSocket.getSocket().sendall((formatMessage(message) + "~").encode("utf8"))
   
   file.close()

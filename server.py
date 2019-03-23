@@ -1,18 +1,21 @@
 import socket
 import select
-import ssl
 import events
+from simplecrypt import encrypt
 
 CLIENT_PORT = 12345
 SERVER_PORT = 50000
-CAFILE = "./keys/CA/ca.crt"
-PEMFILE = "./keys/server.pem"
-INIT_MESSAGE = f"server-init@{SERVER_PORT}"
+
+f = open("./key", "r")
+key = f.read()
+f.close()
+
+INIT_MESSAGE = encrypt(key, f"server-init@{SERVER_PORT}")
 
 # Send a broadcast to all clients (on the same subnet)
 broadcastSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 broadcastSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-broadcastSocket.sendto(INIT_MESSAGE.encode("ascii"), ('', CLIENT_PORT))
+broadcastSocket.sendto(INIT_MESSAGE, ('', CLIENT_PORT))
 broadcastSocket.close()
 
 # Create a socket for accepting incoming TCP connections from clients
@@ -37,7 +40,7 @@ for fd, event in events.pollEvents(pollObject):
 
     # Client socket is closed
     address = addresses.pop(sock)
-    pendingData = bytesReceived.pop(sock, b'').decode("ascii")
+    pendingData = bytesReceived.pop(sock, b'').decode("utf8")
 
     if pendingData:
       print(f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}")
@@ -50,15 +53,7 @@ for fd, event in events.pollEvents(pollObject):
   elif sock is serverSocket:
 
     # New Connection
-
-    # Setup TLS
-    purpose = ssl.Purpose.CLIENT_AUTH
-    context = ssl.create_default_context(purpose=purpose, cafile=CAFILE)
-    context.load_cert_chain(PEMFILE)
-
-    # Accept incoming connection
     sock, address = sock.accept()
-    sock = context.wrap_socket(sock, server_side=True)
 
     print(f"New Connection from {address}")
     sock.setblocking(False)
@@ -78,7 +73,7 @@ for fd, event in events.pollEvents(pollObject):
     totalData = bytesReceived.pop(sock, b'') + nextData
 
     if(totalData.endswith(b'~')):
-      print(f"{addresses[sock][0]}: {totalData.decode('ascii')[:-1]}", end="")
+      print(f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}", end="")
 
     else:
       bytesReceived[sock] = totalData

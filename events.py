@@ -1,5 +1,4 @@
 import psutil
-import ssl
 import socket
 import utils
 import time
@@ -12,7 +11,7 @@ def pollEvents(pollObject):
     for fd, event in pollObject.poll():
       yield fd, event
 
-def serverEvents(broadcastSocket, ca, mutableSocket):
+def serverEvents(broadcastSocket, mutableSocket):
   
   while True:
 
@@ -20,19 +19,16 @@ def serverEvents(broadcastSocket, ca, mutableSocket):
       port = utils.getServerPort(data)
 
       if port == -1:
+        print("Ignoring connection request from: ", serverAddress)
         continue
 
-      purpose = ssl.Purpose.SERVER_AUTH
-      context = ssl.create_default_context(purpose=purpose, cafile=ca)
-
-      rawServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      tmpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
       try:
-        rawServerSocket.connect((serverAddress[0], port))
-        tmpSecureSocket = context.wrap_socket(rawServerSocket, server_hostname="Lab-Monitor")
-        mutableSocket.setSocket(tmpSecureSocket)
+        tmpSocket.connect((serverAddress[0], port))
+        mutableSocket.setSocket(tmpSocket)
       
-      except:      
+      except:    
         continue
       
 def USBEvents(serverSocket):
