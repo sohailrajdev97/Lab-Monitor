@@ -79,5 +79,6 @@ for fd, event in events.pollEvents(pollObject):
 
     if(totalData.endswith(b'~')):
       print(f"{totalData.decode('ascii')[:-1]} from {addresses[sock]}")
+      
     else:
       bytesReceived[sock] = totalData
