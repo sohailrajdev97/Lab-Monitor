@@ -1,7 +1,8 @@
 import os
+from datetime import datetime
 
 def formatMessage(message):
-  return message + "\n"
+  return f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} {message} \n"
 
 def flushLogs():
 
