@@ -27,7 +27,7 @@ def sendStoptMessage(clientPort):
   broadcastSocket.sendto(STOP_MESSAGE, ('', clientPort))
   broadcastSocket.close()
 
-def server(serverPort):
+def server(serverPort, logArea):
   # Create a socket for accepting incoming TCP connections from clients
   serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -53,9 +53,9 @@ def server(serverPort):
       pendingData = bytesReceived.pop(sock, b'').decode("utf8")
 
       if pendingData:
-        print(f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}")
+        logArea.insert(tkinter.END, f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}\n")
       else:
-        print(f"Disconnection: Client {address}")
+        logArea.insert(tkinter.END, f"Disconnection: Client {address}\n")
       
       pollObject.unregister(fd)
       del clientSockets[fd]
@@ -65,7 +65,7 @@ def server(serverPort):
       # New Connection
       sock, address = sock.accept()
 
-      print(f"New Connection from {address}")
+      logArea.insert(tkinter.END, f"New Connection from {address}\n")
       sock.setblocking(False)
       clientSockets[sock.fileno()] = sock
       addresses[sock] = address
@@ -83,10 +83,24 @@ def server(serverPort):
       totalData = bytesReceived.pop(sock, b'') + nextData
 
       if(totalData.endswith(b'~')):
-        print(f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}", end="")
+        logArea.insert(tkinter.END, f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}")
 
       else:
         bytesReceived[sock] = totalData
+
+def serverBtnCommand():
+
+  if(serverBtn["text"] == "Start Server"):
+    logArea.insert(tkinter.END, "Sending connection request ....\n")
+    serverBtn["text"] = "Stop Server"
+    sendInitMessage(CLIENT_PORT, SERVER_PORT)
+    logArea.insert(tkinter.END, "Connection request sent. Waiting for clients ....\n")
+  
+  else:
+    logArea.insert(tkinter.END, "Sending stop message ....\n")
+    serverBtn["text"] = "Start Server"
+    sendStoptMessage(CLIENT_PORT)
+    logArea.insert(tkinter.END, "Stop message sent\n")
 
 if __name__ == "__main__":
 
@@ -98,11 +112,11 @@ if __name__ == "__main__":
   title = tkinter.Label(root, text="Lab-Monitor Server", font=("Serif", 32))
   title.pack()
 
-  serverBtn = tkinter.Button(root, text="Start Server")
+  serverBtn = tkinter.Button(root, text="Start Server", command=serverBtnCommand)
   serverBtn.pack()
 
-  logArea = tkinter.Text(root, height=40, width=130)
+  logArea = tkinter.Text(root, height=40, width=130, bg="#E6E6E6")
   logArea.pack()
 
-  Thread(target=server, args=(SERVER_PORT, )).start()
+  Thread(target=server, args=(SERVER_PORT, logArea)).start()
   root.mainloop()
