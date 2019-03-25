@@ -1,8 +1,7 @@
 import argparse
 import socket
 import select
-import events
-from threading import Thread
+from threading import Thread, Event
 import tkinter
 from simplecrypt import encrypt
 
@@ -25,7 +24,7 @@ def sendStoptMessage(clientPort):
   broadcastSocket.sendto(STOP_MESSAGE, ('', clientPort))
   broadcastSocket.close()
 
-def server(serverPort, logArea):
+def server(serverPort, logArea, terminateFlag):
   # Create a socket for accepting incoming TCP connections from clients
   serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -41,50 +40,51 @@ def server(serverPort, logArea):
   pollObject = select.poll()
   pollObject.register(serverSocket, select.POLLIN) 
 
-  for fd, event in events.pollEvents(pollObject):
-    sock = clientSockets[fd]
+  while not terminateFlag.is_set():
+    for fd, event in pollObject.poll(3000):
+      sock = clientSockets[fd]
 
-    if event & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+      if event & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
 
-      # Client socket is closed
-      address = addresses.pop(sock)
-      pendingData = bytesReceived.pop(sock, b'').decode("utf8")
+        # Client socket is closed
+        address = addresses.pop(sock)
+        pendingData = bytesReceived.pop(sock, b'').decode("utf8")
 
-      if pendingData:
-        logArea.insert(tkinter.END, f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}\n")
-      else:
-        logArea.insert(tkinter.END, f"Disconnection: Client {address}\n")
+        if pendingData:
+          logArea.insert(tkinter.END, f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}\n")
+        else:
+          logArea.insert(tkinter.END, f"Disconnection: Client {address}\n")
+        
+        pollObject.unregister(fd)
+        del clientSockets[fd]
       
-      pollObject.unregister(fd)
-      del clientSockets[fd]
-    
-    elif sock is serverSocket:
+      elif sock is serverSocket:
 
-      # New Connection
-      sock, address = sock.accept()
+        # New Connection
+        sock, address = sock.accept()
 
-      logArea.insert(tkinter.END, f"New Connection from {address}\n")
-      sock.setblocking(False)
-      clientSockets[sock.fileno()] = sock
-      addresses[sock] = address
-      pollObject.register(sock, select.POLLIN)
-    
-    elif event & select.POLLIN:
-
-      # Incoming data
-      nextData = sock.recv(4096)
-
-      if not nextData:
-        sock.close()
-        continue
+        logArea.insert(tkinter.END, f"New Connection from {address}\n")
+        sock.setblocking(False)
+        clientSockets[sock.fileno()] = sock
+        addresses[sock] = address
+        pollObject.register(sock, select.POLLIN)
       
-      totalData = bytesReceived.pop(sock, b'') + nextData
+      elif event & select.POLLIN:
 
-      if(totalData.endswith(b'~')):
-        logArea.insert(tkinter.END, f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}")
+        # Incoming data
+        nextData = sock.recv(4096)
 
-      else:
-        bytesReceived[sock] = totalData
+        if not nextData:
+          sock.close()
+          continue
+        
+        totalData = bytesReceived.pop(sock, b'') + nextData
+
+        if(totalData.endswith(b'~')):
+          logArea.insert(tkinter.END, f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}")
+
+        else:
+          bytesReceived[sock] = totalData
 
 def serverBtnCommand():
 
@@ -99,6 +99,10 @@ def serverBtnCommand():
     serverBtn["text"] = "Start Server"
     sendStoptMessage(CLIENT_PORT)
     logArea.insert(tkinter.END, "Stop message sent\n")
+
+def terminate():
+  terminateFlag.set()
+  root.destroy()
 
 if __name__ == "__main__":
 
@@ -127,5 +131,8 @@ if __name__ == "__main__":
   logArea = tkinter.Text(root, height=40, width=130, bg="#E6E6E6")
   logArea.pack()
 
-  Thread(target=server, args=(SERVER_PORT, logArea)).start()
+  terminateFlag = Event()
+  Thread(target=server, args=(SERVER_PORT, logArea, terminateFlag)).start()
+
+  root.protocol("WM_DELETE_WINDOW", terminate)
   root.mainloop()

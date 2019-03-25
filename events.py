@@ -4,13 +4,6 @@ import time
 import socket
 import subprocess
 
-def pollEvents(pollObject):
-
-  while True:
-
-    for fd, event in pollObject.poll():
-      yield fd, event
-
 def USBEvents(serverSocket):
 
   oldDevices = psutil.disk_partitions()
