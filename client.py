@@ -1,3 +1,4 @@
+import argparse
 import events
 import socket
 import utils
@@ -5,7 +6,10 @@ import events
 
 from multiprocessing import Process
 
-PORT = 65000
+parser = argparse.ArgumentParser(description='Lab-Monitor Server')
+parser.add_argument("-p", "--port", help="Port Number", type=int, default=45001)
+args = parser.parse_args()
+PORT = args.port
 
 broadcastSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 broadcastSocket.bind(('', PORT))

@@ -1,12 +1,10 @@
+import argparse
 import socket
 import select
 import events
 from threading import Thread
 import tkinter
 from simplecrypt import encrypt
-
-CLIENT_PORT = 65000
-SERVER_PORT = 50000
 
 # Read the AES key
 f = open("./key", "r")
@@ -104,6 +102,14 @@ def serverBtnCommand():
 
 if __name__ == "__main__":
 
+  parser = argparse.ArgumentParser(description='Lab-Monitor Server')
+  parser.add_argument("-c", "--client", help="Client Port", type=int, default=45001)
+  parser.add_argument("-s", "--server", help="Server Port", type=int, default=45000)
+  args = parser.parse_args()
+
+  SERVER_PORT = args.server
+  CLIENT_PORT = args.client
+
   root = tkinter.Tk()
   root.title("Lab-Monitor Server")
   root.geometry("1024x768")
@@ -111,6 +117,9 @@ if __name__ == "__main__":
 
   title = tkinter.Label(root, text="Lab-Monitor Server", font=("Serif", 32))
   title.pack()
+
+  portLabel = tkinter.Label(root, text=f"Server Port: {SERVER_PORT}  Client Port: {CLIENT_PORT}")
+  portLabel.pack()
 
   serverBtn = tkinter.Button(root, text="Start Server", command=serverBtnCommand)
   serverBtn.pack()
