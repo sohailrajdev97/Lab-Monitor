@@ -3,7 +3,7 @@ import select
 import events
 from simplecrypt import encrypt
 
-CLIENT_PORT = 12345
+CLIENT_PORT = 65000
 SERVER_PORT = 50000
 
 f = open("./key", "r")

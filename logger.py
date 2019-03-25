@@ -18,10 +18,10 @@ def log(message, serverSocket):
   file = open("./logs.txt", "a+")
   file.write(formatMessage(message))
 
-  if serverSocket.getSocket() is None:
-    file.write(formatMessage("Not connected to a server. Logs will be written to the disk."))
+  try:
+    serverSocket.sendall((formatMessage(message) + "~").encode("utf8"))
 
-  else:
-    serverSocket.getSocket().sendall((formatMessage(message) + "~").encode("utf8"))
+  except:
+    file.write(formatMessage("Could not send to the server. Maybe the server socket is closed"))
   
   file.close()

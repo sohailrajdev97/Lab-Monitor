@@ -1,18 +1,24 @@
-from simplecrypt import decrypt
+import simplecrypt
 
-def getServerPort(messageBytes):
-
-  # Return the server port if messageBytes is a server-init message. Else returns -1
+def decrypt(messageBytes):
 
   f = open("./key", "r")
   key = f.read()
   f.close()
 
   try:
-    message = decrypt(key, messageBytes).decode("utf8")
+    message = simplecrypt.decrypt(key, messageBytes).decode("utf8")
+
   except:
-    return -1
-  
+    return "NA"
+
+  return message
+
+
+def getServerPort(message):
+
+  # Return the server port if messageBytes is a server-init message. Else returns -1
+ 
   if len(message.split("@")) == 2 and message.split("@")[0] == "server-init" :
 
     try:

@@ -1,15 +1,63 @@
 import events
 import socket
-from MutableSocket import MutableSocket
-from threading import Thread
+import utils
+import events
 
-PORT = 12345
+from multiprocessing import Process
+
+PORT = 65000
 
 broadcastSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 broadcastSocket.bind(('', PORT))
 
-serverSocket = MutableSocket()
+listeningToEvents = False
+usbProcess = None
+networkProcess = None
 
-Thread(target=events.serverEvents, args=[broadcastSocket, serverSocket]).start()
-Thread(target=events.networkEvents, args=[serverSocket]).start()
-Thread(target=events.USBEvents, args=[serverSocket]).start()
+while True:
+
+    data, serverAddress = broadcastSocket.recvfrom(65000)
+    message = utils.decrypt(data)
+
+    if(message == "NA"):
+      print(f"Invalid message received from {serverAddress}")
+      continue
+
+    if message == "server-stop" and listeningToEvents:
+
+      print(f"Received server-stop from {serverAddress}")
+      listeningToEvents = False
+      usbProcess.terminate()
+      networkProcess.terminate()
+      usbProcess = None
+      networkProcess = None
+      continue
+
+    serverPort = utils.getServerPort(message)
+
+    if serverPort == -1:
+      print(f"Invalid port number received from {serverAddress}")
+      continue
+
+    print(f"Received server-init from {serverAddress}")
+
+    serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    try:
+
+      serverSocket.connect((serverAddress[0], serverPort))
+
+      if listeningToEvents:
+        usbProcess.terminate()
+        networkProcess.terminate()
+
+      listeningToEvents = True
+
+      usbProcess = Process(target=events.USBEvents, args=(serverSocket, ))
+      networkProcess = Process(target=events.networkEvents, args=(serverSocket, ))
+      usbProcess.start()
+      networkProcess.start()
+    
+    except:
+      print("Could not connect to the server")  
+      continue

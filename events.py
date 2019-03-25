@@ -1,9 +1,8 @@
 import logger
 import psutil
+import time
 import socket
 import subprocess
-import time
-import utils
 
 def pollEvents(pollObject):
 
@@ -12,26 +11,6 @@ def pollEvents(pollObject):
     for fd, event in pollObject.poll():
       yield fd, event
 
-def serverEvents(broadcastSocket, mutableSocket):
-  
-  while True:
-
-      data, serverAddress = broadcastSocket.recvfrom(65000)
-      port = utils.getServerPort(data)
-
-      if port == -1:
-        print("Ignoring connection request from: ", serverAddress)
-        continue
-
-      tmpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-      try:
-        tmpSocket.connect((serverAddress[0], port))
-        mutableSocket.setSocket(tmpSocket)
-      
-      except:    
-        continue
-      
 def USBEvents(serverSocket):
 
   oldDevices = psutil.disk_partitions()
