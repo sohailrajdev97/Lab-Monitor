@@ -2,6 +2,7 @@ import socket
 import select
 import events
 from threading import Thread
+import tkinter
 from simplecrypt import encrypt
 
 CLIENT_PORT = 65000
@@ -88,5 +89,20 @@ def server(serverPort):
         bytesReceived[sock] = totalData
 
 if __name__ == "__main__":
-  sendInitMessage(CLIENT_PORT, SERVER_PORT)
+
+  root = tkinter.Tk()
+  root.title("Lab-Monitor Server")
+  root.geometry("1024x768")
+  root.resizable(False, False)
+
+  title = tkinter.Label(root, text="Lab-Monitor Server", font=("Serif", 32))
+  title.pack()
+
+  serverBtn = tkinter.Button(root, text="Start Server")
+  serverBtn.pack()
+
+  logArea = tkinter.Text(root, height=40, width=130)
+  logArea.pack()
+
   Thread(target=server, args=(SERVER_PORT, )).start()
+  root.mainloop()
