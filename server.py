@@ -91,14 +91,12 @@ def serverBtnCommand():
   if(serverBtn["text"] == "Start Server"):
     logArea.insert(tkinter.END, "Sending connection request ....\n")
     serverBtn["text"] = "Stop Server"
-    sendInitMessage(CLIENT_PORT, SERVER_PORT)
-    logArea.insert(tkinter.END, "Connection request sent. Waiting for clients ....\n")
+    Thread(target=sendInitMessage, args=(CLIENT_PORT, SERVER_PORT)).start()
   
   else:
     logArea.insert(tkinter.END, "Sending stop message ....\n")
     serverBtn["text"] = "Start Server"
-    sendStoptMessage(CLIENT_PORT)
-    logArea.insert(tkinter.END, "Stop message sent\n")
+    Thread(target=sendStoptMessage, args=(CLIENT_PORT, )).start()
 
 def terminate():
   terminateFlag.set()
