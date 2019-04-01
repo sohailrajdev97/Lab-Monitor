@@ -3,26 +3,33 @@ import socket
 import select
 from threading import Thread, Event
 import tkinter
-from simplecrypt import encrypt
+from cryptography.fernet import Fernet
 
 # Read the AES key
-f = open("./key", "r")
-key = f.read()
-f.close()
+file = open("./key", "r")
+key = file.read().encode("utf8")
+file.close()
 
 def sendInitMessage(clientPort, serverPort):
-  INIT_MESSAGE = encrypt(key, f"server-init@{serverPort}")
+  f = Fernet(key)
+  INIT_MESSAGE = f"server-init@{serverPort}".encode("utf8")
   broadcastSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   broadcastSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-  broadcastSocket.sendto(INIT_MESSAGE, ('', clientPort))
+  broadcastSocket.sendto(f.encrypt(INIT_MESSAGE), ('<broadcast>', clientPort))
   broadcastSocket.close()
 
 def sendStoptMessage(clientPort):
-  STOP_MESSAGE = encrypt(key, "server-stop")
+  f = Fernet(key)
+  STOP_MESSAGE = "server-stop".encode("utf8")
   broadcastSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   broadcastSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-  broadcastSocket.sendto(STOP_MESSAGE, ('', clientPort))
+  broadcastSocket.sendto(f.encrypt(STOP_MESSAGE), ('<broadcast>', clientPort))
   broadcastSocket.close()
+
+def logMessage(msg, logArea, logFile):
+  logArea.insert(tkinter.END, msg)
+  logArea.yview(tkinter.END)
+  logFile.write(msg)
 
 def server(serverPort, logArea, terminateFlag):
   # Create a socket for accepting incoming TCP connections from clients
@@ -33,6 +40,7 @@ def server(serverPort, logArea, terminateFlag):
 
   # Define data structures for async IO
   clientSockets = { serverSocket.fileno(): serverSocket }
+  logFiles = { }
   addresses = { }
   bytesReceived = { }
 
@@ -51,11 +59,14 @@ def server(serverPort, logArea, terminateFlag):
         pendingData = bytesReceived.pop(sock, b'').decode("utf8")
 
         if pendingData:
-          logArea.insert(tkinter.END, f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}\n")
+          logMessage(f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}\n", logArea, logFiles[sock.fileno()])
+          
         else:
-          logArea.insert(tkinter.END, f"Disconnection: Client {address}\n")
+          logMessage(f"Disconnection: Client {address}\n", logArea, logFiles[sock.fileno()])
         
         pollObject.unregister(fd)
+        logFiles[sock.fileno()].close()
+        del logFiles[sock.fileno()]
         del clientSockets[fd]
       
       elif sock is serverSocket:
@@ -63,11 +74,13 @@ def server(serverPort, logArea, terminateFlag):
         # New Connection
         sock, address = sock.accept()
 
-        logArea.insert(tkinter.END, f"New Connection from {address}\n")
         sock.setblocking(False)
         clientSockets[sock.fileno()] = sock
         addresses[sock] = address
+        logFiles[sock.fileno()] = open(f"server_logs/{sock.getpeername()[0]}.txt", "w")
         pollObject.register(sock, select.POLLIN)
+
+        logMessage(f"New Connection from {address}\n", logArea, logFiles[sock.fileno()])
       
       elif event & select.POLLIN:
 
@@ -81,7 +94,7 @@ def server(serverPort, logArea, terminateFlag):
         totalData = bytesReceived.pop(sock, b'') + nextData
 
         if(totalData.endswith(b'~')):
-          logArea.insert(tkinter.END, f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}")
+          logMessage(f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}", logArea, logFiles[sock.fileno()])
 
         else:
           bytesReceived[sock] = totalData

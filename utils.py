@@ -1,18 +1,19 @@
-import simplecrypt
+from cryptography.fernet import Fernet
 
 def decrypt(messageBytes):
 
-  f = open("./key", "r")
-  key = f.read()
-  f.close()
+  file = open("./key", "r")
+  key = file.read().encode("utf8")
+  file.close()
 
   try:
-    message = simplecrypt.decrypt(key, messageBytes).decode("utf8")
+    f = Fernet(key)
+    message = f.decrypt(messageBytes)
 
   except:
     return "NA"
 
-  return message
+  return message.decode("utf8")
 
 
 def getServerPort(message):

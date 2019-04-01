@@ -1,2 +1,2 @@
-simple-crypt
+cryptography
 psutil
