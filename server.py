@@ -10,6 +10,8 @@ file = open("./key", "r")
 key = file.read().encode("utf8")
 file.close()
 
+terminateFlag = Event()
+
 def sendInitMessage(clientPort, serverPort):
   f = Fernet(key)
   INIT_MESSAGE = f"server-init@{serverPort}".encode("utf8")
@@ -99,16 +101,21 @@ def server(serverPort, logArea, terminateFlag):
         else:
           bytesReceived[sock] = totalData
 
+  print("Server stopped")
+
 def serverBtnCommand():
 
   if(serverBtn["text"] == "Start Server"):
     logArea.insert(tkinter.END, "Sending connection request ....\n")
     serverBtn["text"] = "Stop Server"
+    terminateFlag.clear()
+    Thread(target=server, args=(SERVER_PORT, logArea, terminateFlag)).start()
     Thread(target=sendInitMessage, args=(CLIENT_PORT, SERVER_PORT)).start()
   
   else:
     logArea.insert(tkinter.END, "Sending stop message ....\n")
     serverBtn["text"] = "Start Server"
+    terminateFlag.set()
     Thread(target=sendStoptMessage, args=(CLIENT_PORT, )).start()
 
 def terminate():
@@ -141,9 +148,6 @@ if __name__ == "__main__":
 
   logArea = tkinter.Text(root, height=40, width=130, bg="#E6E6E6")
   logArea.pack()
-
-  terminateFlag = Event()
-  Thread(target=server, args=(SERVER_PORT, logArea, terminateFlag)).start()
 
   root.protocol("WM_DELETE_WINDOW", terminate)
   root.mainloop()
