@@ -61,14 +61,14 @@ def server(serverPort, logArea, terminateFlag):
         pendingData = bytesReceived.pop(sock, b'').decode("utf8")
 
         if pendingData:
-          logMessage(f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}\n", logArea, logFiles[sock.fileno()])
+          logMessage(f"ABNORMAL DISCONNECTION: Client {address} with pending data: {pendingData}\n", logArea, logFiles[sock])
           
         else:
-          logMessage(f"Disconnection: Client {address}\n", logArea, logFiles[sock.fileno()])
+          logMessage(f"Disconnection: Client {address}\n", logArea, logFiles[sock])
         
         pollObject.unregister(fd)
-        logFiles[sock.fileno()].close()
-        del logFiles[sock.fileno()]
+        logFiles[sock].close()
+        del logFiles[sock]
         del clientSockets[fd]
       
       elif sock is serverSocket:
@@ -79,10 +79,10 @@ def server(serverPort, logArea, terminateFlag):
         sock.setblocking(False)
         clientSockets[sock.fileno()] = sock
         addresses[sock] = address
-        logFiles[sock.fileno()] = open(f"server_logs/{sock.getpeername()[0]}.txt", "w")
+        logFiles[sock] = open(f"server_logs/{sock.getpeername()[0]}.txt", "w")
         pollObject.register(sock, select.POLLIN)
 
-        logMessage(f"New Connection from {address}\n", logArea, logFiles[sock.fileno()])
+        logMessage(f"New Connection from {address}\n", logArea, logFiles[sock])
       
       elif event & select.POLLIN:
 
@@ -96,7 +96,7 @@ def server(serverPort, logArea, terminateFlag):
         totalData = bytesReceived.pop(sock, b'') + nextData
 
         if(totalData.endswith(b'~')):
-          logMessage(f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}", logArea, logFiles[sock.fileno()])
+          logMessage(f"{addresses[sock][0]}: {totalData.decode('utf8')[:-1]}", logArea, logFiles[sock])
 
         else:
           bytesReceived[sock] = totalData
