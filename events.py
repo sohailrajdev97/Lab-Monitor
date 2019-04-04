@@ -1,6 +1,7 @@
 import logger
 import psutil
 import time
+import os
 import socket
 import subprocess
 
@@ -38,8 +39,19 @@ def networkEvents(serverSocket):
   logger.log("Listening to network events", serverSocket)
   ip = get_ip()
 
+  env = dict(os.environ)  # make a copy of the environment
+  lp_key = 'LD_LIBRARY_PATH'  # for Linux and *BSD.
+  lp_orig = env.get(lp_key + '_ORIG')
+
+  if lp_orig is not None:
+      env[lp_key] = lp_orig  # restore the original, unmodified value
+  else:
+    # This happens when LD_LIBRARY_PATH was not set.
+    # Remove the env var as a last resort:
+    env.pop(lp_key, None)
+
   dumpFilter = f"ip and host {ip} and port not 53 and ((tcp[tcpflags] & tcp-syn != 0) or udp)"
-  dumpProcess = subprocess.Popen(("tcpdump", "-l", "-nn", dumpFilter), stdout=subprocess.PIPE)
+  dumpProcess = subprocess.Popen(("tcpdump", "-l", "-nn", dumpFilter), stdout=subprocess.PIPE, env=env)
 
   for row in iter(dumpProcess.stdout.readline, b''):
 
