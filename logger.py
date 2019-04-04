@@ -1,8 +1,11 @@
 import os
+import re
+import uuid
 from datetime import datetime
 
 def formatMessage(message):
-  return f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} {message} \n"
+  macAddress = ':'.join(re.findall('..', '%012x' % uuid.getnode()))
+  return f"Machine MAC: {macAddress} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} {message} \n"
 
 def flushLogs():
 
@@ -21,7 +24,7 @@ def log(message, serverSocket):
   try:
     serverSocket.sendall((formatMessage(message) + "~").encode("utf8"))
 
-  except:
+  except Exception as e:
     file.write(formatMessage("Could not send to the server. Maybe the server socket is closed"))
   
   file.close()
