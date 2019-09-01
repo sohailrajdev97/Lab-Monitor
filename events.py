@@ -50,7 +50,7 @@ def networkEvents(serverSocket):
     # Remove the env var as a last resort:
     env.pop(lp_key, None)
 
-  dumpFilter = f"ip and host {ip} and port not 53 and ((tcp[tcpflags] & tcp-syn != 0) or udp)"
+  dumpFilter = f"ip and host {ip} and port not 53 and port not 138 and port not 5353 and ((tcp[tcpflags] & tcp-syn != 0) and not udp)"
   dumpProcess = subprocess.Popen(("tcpdump", "-l", "-nn", dumpFilter), stdout=subprocess.PIPE, env=env)
 
   for row in iter(dumpProcess.stdout.readline, b''):
